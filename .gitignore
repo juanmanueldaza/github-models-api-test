@@ -1,0 +1,9 @@
+# Environment variables (contains sensitive information)
+.env
+
+# Response files (generated content)
+response.json
+
+# Common system files
+.DS_Store
+Thumbs.db
