@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GitHub Models API Test</title>
+</head>
+<body>
+    <h1>GitHub Models API Test</h1>
+    <p>Enter your GitHub token to test the API. Check the browser console for responses.</p>
+    
+    <div style="margin: 20px 0; padding: 20px; border: 1px solid #ccc; border-radius: 5px;">
+        <label for="tokenInput">GitHub Token:</label><br>
+        <input type="password" id="tokenInput" placeholder="github_pat_..." style="width: 400px; margin: 10px 0;">
+        <br>
+        <label for="messageInput">Message:</label><br>
+        <input type="text" id="messageInput" value="What is the capital of France?" style="width: 400px; margin: 10px 0;">
+        <br>
+        <button onclick="makeAPIRequest()" style="padding: 10px 20px;">Send Request</button>
+        <button onclick="clearConsole()" style="padding: 10px 20px; margin-left: 10px;">Clear Console</button>
+    </div>
+    
+    <p><strong>Instructions:</strong></p>
+    <ol>
+        <li>Get a GitHub token from <a href="https://github.com/settings/tokens" target="_blank">GitHub Settings</a></li>
+        <li>Make sure it has access to GitHub Models</li>
+        <li>Enter the token above (it's stored locally, not sent anywhere else)</li>
+        <li>Open Developer Tools (F12) → Console tab</li>
+        <li>Click "Send Request" to test the API</li>
+    </ol>
+
+    <script>
+        // Configuration
+        const config = {
+            apiUrl: 'https://models.github.ai/inference/chat/completions',
+            model: 'openai/gpt-4.1',
+            apiVersion: '2022-11-28'
+        };
+
+        // Function to make the API request
+        async function makeAPIRequest() {
+            const tokenInput = document.getElementById('tokenInput');
+            const messageInput = document.getElementById('messageInput');
+            
+            const githubToken = tokenInput.value.trim();
+            const message = messageInput.value.trim() || 'What is the capital of France?';
+            
+            if (!githubToken) {
+                console.error('Please enter a GitHub token');
+                alert('Please enter a GitHub token');
+                return;
+            }
+            
+            if (!githubToken.startsWith('github_pat_')) {
+                console.warn('Token should start with "github_pat_"');
+            }
+
+            console.log('Making API request with message:', message);
+            
+            try {
+                const requestBody = {
+                    model: config.model,
+                    messages: [
+                        {
+                            role: "user",
+                            content: message
+                        }
+                    ]
+                };
+
+                console.log('Request body:', JSON.stringify(requestBody, null, 2));
+
+                const response = await fetch(config.apiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/vnd.github+json',
+                        'Authorization': `Bearer ${githubToken}`,
+                        'X-GitHub-Api-Version': config.apiVersion,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+
+                console.log('Response status:', response.status);
+                console.log('Response headers:', response.headers);
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('API Error:', errorText);
+                    throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
+                }
+
+                const data = await response.json();
+                console.log('API Response:', JSON.stringify(data, null, 2));
+                
+                // Extract and log just the message content
+                if (data.choices && data.choices[0] && data.choices[0].message) {
+                    console.log('AI Response:', data.choices[0].message.content);
+                    console.log('---');
+                }
+
+                return data;
+            } catch (error) {
+                console.error('Error making API request:', error);
+                throw error;
+            }
+        }
+
+        // Function to clear console
+        function clearConsole() {
+            console.clear();
+            console.log('Console cleared. Ready for new requests.');
+        }
+
+        // Handle Enter key in inputs
+        document.addEventListener('DOMContentLoaded', function() {
+            const tokenInput = document.getElementById('tokenInput');
+            const messageInput = document.getElementById('messageInput');
+            
+            [tokenInput, messageInput].forEach(input => {
+                input.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        makeAPIRequest();
+                    }
+                });
+            });
+            
+            console.log('GitHub Models API Test loaded.');
+            console.log('Enter your token and message above, then click "Send Request"');
+        });
+
+        // Also expose the function globally so you can call it from console
+        window.makeAPIRequest = makeAPIRequest;
+        window.clearConsole = clearConsole;
+    </script>
+</body>
+</html>
